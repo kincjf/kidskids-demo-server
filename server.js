@@ -18,19 +18,34 @@ app.use(cors());
 var imageRoot = '../../assets/image/';
 
 
-var main_category = ["아우터", "상의", "하의", "스커트", "원피스/세트", "커플 아우터"];
+var main_category = ["아우터", "상의", "하의", "스커트", "원피스", "세트", "슈즈", "신생아", "가방"];
 var sub_category1 = ["티셔츠", "맨투맨", "후드/후디", "셔츠/남방", "니트/니트웨어/스웨터", "블라우스", "민소매/나시", "커플 상의"];
 var sub_category2 = ["일자바지", "반바지/숏팬츠", "멜빵바지", "레깅스", "청바지"];
 var sub_category3 = ["롱스커트", "미니스커트", "미디스커트"];
 var sub_category4 = ["미니원피스", "롱원피스", "투피스/세트", "시밀러룩/패밀리룩", "드레스"];
 var sub_category0 = ["코트", "패딩", "자켓", "가디건", "야상", "베스트", "커플 아우터"];
-var subCategotyMap = [sub_category0, sub_category1, sub_category2, sub_category3, sub_category4];
-
+var subCategotyMap = [sub_category0, sub_category1, sub_category2, sub_category3, sub_category4, sub_category0, sub_category0, sub_category0, sub_category0];
+var store =["bebenew_st","bobbymall_st","bori_st","franchi_st","mo_st","ozkiz_st","rittle_st","stylenoriter_st","thehanbok_st","toebox_st","zts_st"];
 var color = ["검정", "빨강", "노랑", "남색"];
 var style = ["예쁜", "러블리", "오피스", "힙"];
 var material = ["면", "합성섬유", "오리털", "린넨"];
 
 var recordsToGenerate = 200;
+
+var Store = mongoose.model('Store', {
+    ID: Number,
+    name: String,
+    subScript: String,
+    url: String,
+    imageUrl: String,
+
+    likeOption: {
+        like_count: Number,
+        like_date: String
+    },
+    update_date: String,
+    tag: []
+});
 
 var Item = mongoose.model('Item', {
     ID: Number,
@@ -70,12 +85,9 @@ var Categoty = mongoose.model('Category', {
 });
 
 var resultForm = {
-    max_Price: Number,
-    min_Price: Number,
     color: [],
     style: [],
-    material: [],
-    items: [],
+    material: []
 }
 
 function getRandomInt(min, max) {
@@ -88,7 +100,35 @@ function getRandomInt(min, max) {
 // Categoty.remove({}, function (res) {
 //     console.log("removed categories");
 // });
+// Store.remove({}, function(res){
+//     console.log('removed Stores');
+// });
 
+Store.count({}, function (err, count) {
+    console.log("Store: " + count);
+
+    if (count === 0) {
+        console.log("Creat stores");
+        for (var i = 0; i < store.length; i++) {
+            var newStore = new Store({
+                ID: i + 1,
+                name: store[i],
+                subScript: "이것은 "+ store[i]+ "의 설명이다.",
+                url: "http://www.naver.com",
+                imageUrl: imageRoot+store[i]+".svg",
+                like_count: 0,
+                likeOption: {
+                    like_date: '2018-' + getRandomInt(1, 12) + '-' + getRandomInt(1, 30),
+                    like_age: Number,
+                },
+                update_date: '2019-' + getRandomInt(1, 12) + '-' + getRandomInt(1, 30),
+                tag: []
+            });
+            newStore.save(function(err, doc){});
+        }
+        
+    }
+})
 
 Item.count({}, function (err, count) {
     console.log("Item: " + count);
@@ -131,27 +171,29 @@ Item.count({}, function (err, count) {
             }
 
             for (var a = 0; a < 4; a++) {
-
                 if (getRandomInt(0, 1) == 1) {
                     randomColor.push(color[a]);
+                    a = 4;
                 }
-                if (randomColor.length == 0) randomColor.push("Undefind");
             }
+            if (randomColor.length == 0) randomColor.push("Undefind");
             for (var a = 0; a < 4; a++) {
 
                 if (getRandomInt(0, 1) == 1) {
                     randomStyle.push(style[a]);
+                    a = 4;
                 }
-                if (randomStyle.length == 0) randomStyle.push("Undefind");
             }
+            if (randomStyle.length == 0) randomStyle.push("Undefind");
 
             for (var a = 0; a < 4; a++) {
 
                 if (getRandomInt(0, 1) == 1) {
                     randomMaterial.push(material[a]);
+                    a = 4;
                 }
-                if (randomMaterial.length == 0) randomMaterial.push("Undefind");
             }
+            if (randomMaterial.length == 0) randomMaterial.push("Undefind");
 
             var newItem = new Item({
                 ID: i + 1,
@@ -191,7 +233,8 @@ Categoty.count({}, function (err, count) {
 
     if (count === 0) {
         console.log("Create test categories");
-        for (var i = 0; i < 5; i++) {
+        for (var i = 0; i < main_category.length; i++) {
+            
             var subcategory = subCategotyMap[i];
 
             var subcategoryList = [];
@@ -205,7 +248,7 @@ Categoty.count({}, function (err, count) {
                 ID: i + 1,
                 name: main_category[i],
                 parent: 0,
-                image: "",
+                image: imageRoot+"testCaImage"+i+".svg",
                 children: subcategoryList,
                 like_count: 0
             });
@@ -262,6 +305,23 @@ app.get('/api/categories', function (req, res) {
     });
 });
 
+//get 전체 스토어 리스트
+
+app.get('/api/stores', function (req, res) {
+    Store.find(function (err, stores) {
+        if (err) return res.status(500).send({ error: 'load stores failure' });
+        res.json(stores);
+    });
+});
+
+//get store id 검색
+app.get('/api/stores/:id', function(req,res){
+    Store.findOne({ID: req.params.id}, function (err, stores){
+        if (err) return res.status(500).send({ error: 'load store by Id failure' });
+        res.json(stores);
+    });
+})
+
 //특정 카테고리 아이템 검색
 app.get('/api/categories/items/:id', function (req, res) {
     if (parseInt(req.params.id) >= 10) {
@@ -284,39 +344,72 @@ app.post('/api/items/filter', function (req, res) {
         $or: [{ main_category: req.body.category }, { sub_category: req.body.category }],
         price: { $gte: req.body.min_Price, $lte: req.body.max_Price },
 
-        color: { $elemMatch: { $in: req.body.color } },
-        style: { $elemMatch: { $in: req.body.style } },
-        material: { $elemMatch: { $in: req.body.material } }
+        color: { $elemMatch: { $in: req.body.attributes.color } },
+        style: { $elemMatch: { $in: req.body.attributes.style } },
+        material: { $elemMatch: { $in: req.body.attributes.material } }
 
     }, function (err, items) {
         if (err) return res.status(500).send({ error: 'load items failure' });
-        var result = resultForm;
-        result.items = items;
-        
-        items.forEach(function (item, index, array) {
-            item.color.forEach(function (color, index, array) {
-                result.color.push(color);
-            });
-            item.style.forEach(function (style) {
-                result.style.push(style);
-            });
-            item.material.forEach(function (material) {
-                result.material.push(material);
-            });
-            result.color = Array.from(new Set(result.color));
-            result.material = Array.from(new Set(result.material));
-            result.style = Array.from(new Set(result.style));
-        });
-
-        
         res.json(items);
 
-    });    
+    });
 });
+
+// 해당 카테고리의 옵션값 검색
+app.get('/api/category/attributes/:id', function (req, res) {
+    var categoryItems = [];
+    Item.find(function (err, items) {
+        if (parseInt(req.params.id) >= 10) {
+            Item.find({ sub_category: req.params.id }, function (err, items) {
+                if (err) return res.status(500).send({ error: 'items search failure' });
+                res.json(searchAttributes(items));
+            });
+        }
+        else {
+            Item.find({ main_category: req.params.id }, function (err, items) {
+                if (err) return res.status(500).send({ error: 'items search failure' });
+                res.json(searchAttributes(items));
+            });
+        }
+
+    })
+});
+
+//아이템 리스트에서 옵션값만 추출
+function searchAttributes(items) {
+    var result = resultForm;
+    var tempColorArray = [];
+    var tempStyleArray = [];
+    var tempMaterialArray = [];
+
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+
+        for (var j = 0; j < item.color.length; j++) {
+            tempColorArray.push(item.color[j]);
+        }
+        tempColorArray = Array.from(new Set(tempColorArray));
+        result.color = tempColorArray;
+
+        for (var j = 0; j < item.style.length; j++) {
+            tempStyleArray.push(item.style[j]);
+        }
+        tempStyleArray = Array.from(new Set(tempStyleArray));
+        result.style = tempStyleArray;
+
+        for (var j = 0; j < item.material.length; j++) {
+            tempMaterialArray.push(item.material[j]);
+        }
+        tempMaterialArray = Array.from(new Set(tempMaterialArray));
+        result.material = tempMaterialArray;
+
+    }
+
+    return result;
+}
 
 //GET 전체 아이템
 app.get('/api/items', function (req, res) {
-
 
     Item.find(function (err, items) {
         if (err) return res.status(500).send({ error: 'load items failure' });
